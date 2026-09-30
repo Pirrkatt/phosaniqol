@@ -41,18 +41,18 @@ public class PhosaniTotem extends PhosaniNpc
 		if (expireTick != -1)
 		{
 			this.queue.put(expireTick, hit);
-			StringBuilder out = new StringBuilder("ADD PROJECTILE QUEUE -> ");
-			this.queue.forEach((key, val) -> out.append("{").append(key).append(": ").append(val).append("},"));
-			log.info(out.toString());
+			//StringBuilder out = new StringBuilder("ADD PROJECTILE QUEUE -> ");
+			//this.queue.forEach((key, val) -> out.append("{").append(key).append(": ").append(val).append("},"));
+			//log.info(out.toString());
 		}
 	}
 
-	public void removeHits(int tick)
+	public void consumeHits(int tick)
 	{
 		this.queue.keySet().removeIf(expireTick -> expireTick <= tick);
-		StringBuilder out = new StringBuilder("REMOVE PROJECTILE QUEUE -> ");
-		this.queue.forEach((key, val) -> out.append("{").append(key).append(": ").append(val).append("},"));
-		log.info(out.toString());
+		//StringBuilder out = new StringBuilder("[CONSUME HITS] REMAINING IN QUEUE: ");
+		//this.queue.forEach((key, val) -> out.append("{").append(key).append(": ").append(val).append("},"));
+		//log.info(out.toString());
 	}
 
 	public int sumQueue()

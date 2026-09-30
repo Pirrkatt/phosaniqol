@@ -11,11 +11,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
-import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GameState;
-import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.Item;
-import net.runelite.api.ItemContainer;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
@@ -39,7 +35,6 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.ItemStats;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -203,32 +198,88 @@ public class PhosaniQolPlugin extends Plugin
 			Skill skill = event.getSkill();
 			xpDrops.add(skill);
 
-			TotemWeapon totemWeapon = usedWeapon();
+			if (skill != Skill.HITPOINTS) return;
 
-			if (skill == Skill.HITPOINTS)
+			Player player = client.getLocalPlayer();
+			Actor target = player.getInteracting();
+			if (target instanceof NPC)
 			{
-				Player player = client.getLocalPlayer();
-				Actor actor = player.getInteracting();
-				if (actor instanceof NPC)
-				{
-					int npcId = ((NPC) actor).getId();
-					if (!readyTotems.contains(npcId)) return;
+				int npcId = ((NPC) target).getId();
+				if (!readyTotems.contains(npcId)) return;
 
-					int hit = (event.getXp() == 0) ? 1 : (int) Math.round(event.getXp() * (3.0d / 4.0d));
-					int multiplier = (xpDrops.contains(Skill.MAGIC)) ? 2 : 1;
+				PhosaniTotem targetTotem = totems.get(npcId);
 
-					if (totemWeapon != null)
-					{
-						int expireTick = attackTick + getHitDelay(totemWeapon, actor);
-						totems.get(npcId).addHit(expireTick, hit * multiplier);
-					}
+				int hit = (event.getXp() == 0) ? 1 : (int) Math.round(event.getXp() * (3.0d / 4.0d));
+				//int multiplier = (xpDrops.contains(Skill.MAGIC)) ? 2 : 1
+				// melee & ranged hits on totems do normal damage but xp gained is halved
+				int multiplier = 2;
+				int expireTick = attackTick + getHitDelay(player, target);
+				targetTotem.addHit(expireTick, hit * multiplier);
+				targetTotem.incrementCharge(hit * multiplier);
+			}
+			xpDrops.clear();
+		});
+	}
 
-					totems.get(npcId).incrementCharge(hit * multiplier);
-				}
-				xpDrops.clear();
+	private int getHitDelay(Player player, Actor target)
+	{
+		if (target == null)
+		{
+			return 1;
+		}
+
+		if (player == null)
+		{
+			return 1;
+		}
+
+		WorldPoint playerWp = player.getWorldLocation();
+		if (playerWp == null)
+		{
+			return 1;
+		}
+
+		WorldArea targetArea = target.getWorldArea();
+		if (targetArea == null)
+		{
+			return 1;
+		}
+
+		final int distance = targetArea.distanceTo(playerWp);
+
+		for (AttackType attackType: AttackType.values())
+		{
+			if (attackType.contains(player.getAnimation()))
+			{
+				return attackType.apply(distance) + 1;
+			}
+		}
+
+		return 1;
+	}
+
+	/*
+	@Subscribe
+	public void onStatChanged(StatChanged statChanged)
+	{
+		if (statChanged.getSkill() != Skill.HITPOINTS) return;
+
+		final int attackTick = client.getTickCount();
+		clientThread.invokeLater(() ->
+		{
+			Player player = client.getLocalPlayer();
+			Actor actor = player.getInteracting();
+			if (actor instanceof NPC)
+			{
+				int animationId = client.getLocalPlayer().getAnimation();
+				AttackType totemWeapon = SPELL_ANIMATIONS.contains(animationId) ? AttackType.SPELLBOOK : usedWeapon();
+				int hitDelay = getHitDelay(totemWeapon, actor);
+				int expireTick = attackTick + hitDelay;
+				log.info(totemWeapon.getName() + " delay " + hitDelay + " expire " + expireTick);
 			}
 		});
 	}
+	 */
 
 	@Subscribe
 	public void onHitsplatApplied(HitsplatApplied event)
@@ -239,19 +290,17 @@ public class PhosaniQolPlugin extends Plugin
 			Actor actor = event.getActor();
 			if (actor instanceof NPC)
 			{
-				usedWeapon();
 				int npcId = ((NPC) actor).getId();
 
 				//int hitsplatType = event.getHitsplat().getHitsplatType();
 				//int hitsplatAmount = event.getHitsplat().getAmount();
 
 				if (!readyTotems.contains(npcId)) return;
-
 				PhosaniTotem targetTotem = totems.get(npcId);
+
 				int recalculatedCharge = targetTotem.recalculateCharge();
-				targetTotem.removeHits(hitsplatTick);
+				targetTotem.consumeHits(hitsplatTick);
 				int queuedHits = targetTotem.sumQueue();
-				//log.info("RECALCULATED " + recalculatedCharge + " QUEUE " + queuedHits);
 				targetTotem.setCharge(recalculatedCharge + queuedHits);
 			}
 		});
@@ -379,74 +428,6 @@ public class PhosaniQolPlugin extends Plugin
 		totems.clear();
 		phosaniBoss = null;
 		xpDrops.clear();
-	}
-
-	private int getHitDelay(TotemWeapon totemWeapon, Actor target)
-	{
-		if (target == null)
-			return 1;
-
-		Player player = client.getLocalPlayer();
-		if (player == null)
-			return 1;
-
-		WorldPoint playerWp = player.getWorldLocation();
-		if (playerWp == null)
-			return 1;
-
-		WorldArea targetArea = target.getWorldArea();
-		if (targetArea == null)
-			return 1;
-
-		final int distance = targetArea.distanceTo(playerWp);
-
-		return totemWeapon.getHitDelay(distance);
-	}
-
-	private TotemWeapon usedWeapon()
-	{
-		// TODO: manually casted spells
-		// WIDGET_TARGET_ON_NPC
-		// Client::getSelectedWidget
-		if (client.getVarbitValue(VarbitID.AUTOCAST_SPELL) != 0)
-		{
-			return TotemWeapon.SPELLBOOK;
-		}
-
-		ItemContainer equipment = client.getItemContainer(InventoryID.WORN);
-		if (equipment == null)
-		{
-			return null;
-		}
-
-		Item weapon = equipment.getItem(EquipmentInventorySlot.WEAPON.getSlotIdx());
-		if (weapon == null)
-		{
-			return null;
-		}
-
-		ItemStats weaponStats = itemManager.getItemStats(weapon.getId());
-		if (weaponStats != null && weaponStats.getEquipment().getRstr() > 0)
-		{
-			if (weaponStats.getEquipment().getAspeed() <= 3)
-			{
-				return TotemWeapon.THROWN;
-			}
-			else
-			{
-				return TotemWeapon.BOW;
-			}
-		}
-
-		for (TotemWeapon totemWeapon : TotemWeapon.values())
-		{
-			if (totemWeapon.contains(weapon.getId()))
-			{
-				return totemWeapon;
-			}
-		}
-
-		return TotemWeapon.MELEE;
 	}
 
 	@Provides
