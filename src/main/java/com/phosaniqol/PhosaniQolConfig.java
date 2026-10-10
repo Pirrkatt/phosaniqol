@@ -263,19 +263,58 @@ public interface PhosaniQolConfig extends Config
 	@Alpha
 	@ConfigItem(
 		position = 5,
-		keyName = "addsBorderColor",
-		name = "Border Color",
-		description = "Sets the border color highlighting adds",
+		keyName = "rangedHuskColor",
+		name = "Ranged Husk Color",
+		description = "Sets the border color for ranged husks",
 		section = addsSettings
 	)
-	default Color addsBorderColor()
+	default Color rangedHuskColor()
+	{
+		return new Color(0, 255, 100);
+	}
+
+	@Alpha
+	@ConfigItem(
+		position = 6,
+		keyName = "magicHuskColor",
+		name = "Magic Husk Color",
+		description = "Sets the border color for magic husks",
+		section = addsSettings
+	)
+	default Color magicHuskColor()
+	{
+		return new Color(0, 100, 255);
+	}
+
+	@Alpha
+	@ConfigItem(
+		position = 7,
+		keyName = "parasiteColor",
+		name = "Parasite Color",
+		description = "Sets the border color for parasites",
+		section = addsSettings
+	)
+	default Color parasiteColor()
+	{
+		return new Color(255, 105, 180);
+	}
+
+	@Alpha
+	@ConfigItem(
+		position = 8,
+		keyName = "sleepwalkerColor",
+		name = "Sleepwalker Color",
+		description = "Sets the border color for sleepwalkers",
+		section = addsSettings
+	)
+	default Color sleepwalkerColor()
 	{
 		return new Color(0, 225, 255);
 	}
 
 	@Alpha
 	@ConfigItem(
-		position = 6,
+		position = 9,
 		keyName = "addsFillColor",
 		name = "Fill Color",
 		description = "Sets the fill color for highlighting adds",

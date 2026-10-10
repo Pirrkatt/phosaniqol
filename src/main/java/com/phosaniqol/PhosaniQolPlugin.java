@@ -166,7 +166,10 @@ public class PhosaniQolPlugin extends Plugin
 				case "highlightParasite":
 				case "highlightSleepwalkers":
 				case "addsBorderWidth":
-				case "addsBorderColor":
+				case "rangedHuskColor":
+				case "magicHuskColor":
+				case "parasiteColor":
+				case "sleepwalkerColor":
 				case "addsFillColor":
 					adds.forEach((npcId, add) -> add.setHighlightConfig(config));
 					break;

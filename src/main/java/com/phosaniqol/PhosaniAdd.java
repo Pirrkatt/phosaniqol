@@ -1,5 +1,6 @@
 package com.phosaniqol;
 
+import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
@@ -27,15 +28,36 @@ public class PhosaniAdd extends PhosaniNpc
 
 	public void setHighlightConfig(PhosaniQolConfig config)
 	{
+		int npcId = super.getNpc().getId();
+
 		super.setHighlightConfig(
-			HIGHLIGHT_STYLE_MAP.get(super.getNpc().getId()),
+			HIGHLIGHT_STYLE_MAP.get(npcId),
 			config.addsBorderWidth(),
-			config.addsBorderColor(),
+			getAddHighlightColor(npcId, config),
 			config.addsFillColor(),
 			PhosaniQolConfig.OverlayType.NONE,
 			null,
 			0,
 			null
 		);
+	}
+
+	private Color getAddHighlightColor(int npcId, PhosaniQolConfig config)
+	{
+		switch (npcId)
+		{
+			case NpcID.NIGHTMARE_CHALLENGE_HUSK_RANGED:
+				return config.rangedHuskColor();
+
+			case NpcID.NIGHTMARE_CHALLENGE_HUSK_MAGIC:
+				return config.magicHuskColor();
+
+			case NpcID.NIGHTMARE_CHALLENGE_PARASITE:
+			case NpcID.NIGHTMARE_CHALLENGE_PARASITE_WEAK:
+				return config.parasiteColor();
+
+			default:
+				return config.sleepwalkerColor();
+		}
 	}
 }
